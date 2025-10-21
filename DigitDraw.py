@@ -10,6 +10,7 @@ class DigitDraw:
     screen = pg.display.set_mode((screen_size,screen_size))
     screen.fill("white")
     running = True
+    done = False
 
     def __init__(self):
         pass
@@ -37,6 +38,11 @@ class DigitDraw:
                 elif event.type == pg.KEYDOWN:
                     if event.key == pg.K_c:
                         self.clear_screen()
+                    if event.key == pg.K_RETURN:
+                        self.running = False
+                        self.done = True
+                        pg.quit()
+                        return
 
             pg.display.flip()
 

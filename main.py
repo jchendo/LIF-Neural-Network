@@ -2,9 +2,14 @@ import DigitDraw
 import LIFNeuron
 import numpy as np
 import pickle
-import threading
+import sys
 
-FILEPATH = "C:/Users/jacob/OneDrive/Desktop/Code/Projects/DigitRec Neural Network/"
+laptop = False
+if laptop:
+    FILEPATH = "C:/Users/jacob/OneDrive/Desktop/Code/Projects/DigitRec Neural Network/"
+else:
+    FILEPATH = "C:/Users/jacob/Desktop/Code/Python/DigitRec/"
+
 NUM_INPUT_LAYER = 784
 NUM_HIDDEN_LAYER = 200
 NUM_OUTPUT_LAYER = 10
@@ -12,88 +17,107 @@ NUM_OUTPUT_LAYER = 10
 digit_drawing = DigitDraw.DigitDraw()
 running = True
 
-input_layer_neurons = np.array([LIFNeuron.LIF_Neuron(type=0) for _ in range(NUM_INPUT_LAYER)])
-hidden_layer_neurons = np.array([LIFNeuron.LIF_Neuron(type=1) for _ in range(NUM_HIDDEN_LAYER)])
-output_layer_neurons = np.array([LIFNeuron.LIF_Neuron(type=2) for _ in range(NUM_OUTPUT_LAYER)])
+class LIFNeuralNetwork:
 
-input_hidden_connections = {} ## LIFNeuron: [LIFNeuron, LIFNeuron, LIFNeuron, etc] -> the key receives input from the list of neurons
-input_hidden_weights = {} ## {LIFNeuron: [0.1,0.2,0.3,0.4]} etc
+    input_layer_neurons = None
+    hidden_layer_neurons = None
+    output_layer_neurons = None
 
-hidden_output_connections = {}
-hidden_output_weights = {} 
+    input_hidden_connections = {} ## LIFNeuron: [LIFNeuron, LIFNeuron, LIFNeuron, etc] -> the key receives input from the list of neurons
+    input_hidden_weights = {} ## {LIFNeuron: [0.1,0.2,0.3,0.4]} etc
 
-def updateNeurons():
-    pixels = digit_drawing.pixels
-    for num in range(NUM_INPUT_LAYER): ## probably numpy vectorize this
-        neuron = input_layer_neurons[num]
-        neuron.input = 0 ## reset
+    hidden_output_connections = {}
+    hidden_output_weights = {} 
 
-        pixel_val_x = num % 28
-        pixel_val_y = num // 28
-        pixel = pixels[pixel_val_x][pixel_val_y]
+    def updateNeurons(self):
+        pixels = digit_drawing.pixels
+        for num in range(NUM_INPUT_LAYER): ## probably numpy vectorize this
+            neuron = self.input_layer_neurons[num]
+            neuron.input = 0 ## reset
 
-        if pixel: ## colored black
-           neuron.input = 1
+            pixel_val_x = num % 28
+            pixel_val_y = num // 28
+            pixel = pixels[pixel_val_x][pixel_val_y]
 
-def connectNeurons():
-    num_input_to_hidden = int(np.random.uniform(0.1, 0.3) * NUM_HIDDEN_LAYER)
-    num_hidden_to_output = NUM_OUTPUT_LAYER ## since there's only 10 output neurons, maybe change this
+            if pixel: ## colored black
+                neuron.input = 1
 
-    for neuron in hidden_layer_neurons:
-        connections = []
-        weights = np.random.uniform(0.01, 0.05, size=num_input_to_hidden)
-        for _ in range(num_input_to_hidden): 
-            connections.append(np.random.choice(input_layer_neurons))
+            neuron.update()
 
-        input_hidden_connections[neuron] = connections
-        input_hidden_weights[neuron] = weights
+        for neuron in self.hidden_layer_neurons:
+            neuron.input = 0
+            self.sumInputs(neuron, 1)
 
-    for neuron in output_layer_neurons:
-        connections = []
-        weights = np.random.uniform(0.01, 0.05, size=num_hidden_to_output)
-        for _ in range(num_hidden_to_output): 
-            connections.append(np.random.choice(hidden_layer_neurons))
+    def sumInputs(self,neuron, type):
 
-        hidden_output_connections[neuron] = connections
-        hidden_output_weights[neuron] = weights
-
-    saveConnectivity()
-
-def loadConnectivity():
-    try:
-        data = None
-        with open(f"{FILEPATH}/data/connections.pkl", "rb") as f:
-            data = pickle.load(f)
-        input_hidden_connections.update(data["input_hidden_connections"])
-        input_hidden_weights.update(data["input_hidden_weights"])
-        hidden_output_connections.update(data["hidden_output_connections"])
-        hidden_output_weights.update(data["hidden_output_weights"])
-        print("Data imported!")
-    except:
-        print("Import failed. Generate new connectivity? Y/N")
-        if input("") == 'Y':
-            connectNeurons()
+        if type == 1:
+            connections = self.input_hidden_connections
+            weights = self.input_hidden_weights
         else:
-            return
+            connections = self.hidden_output_connections
+            weights = self.hidden_output_weights
 
-def saveConnectivity():
-    with open(f"{FILEPATH}/data/connections.pkl", "wb") as f:
-        pickle.dump({
-            "input_hidden_connections": input_hidden_connections,
-            "input_hidden_weights": input_hidden_weights,
-            "hidden_output_connections": hidden_output_connections,
-            "hidden_output_weights": hidden_output_weights
-        }, f)
+        for input_num in range(len(connections[neuron])):
+            input_neuron = connections[neuron][input_num]
+            synapse_weight = weights[neuron][input_num]
 
-def run():
-    while running:
-        updateNeurons()
+            neuron.input += input_neuron.output * synapse_weight
+        
+    def connectNeurons(self):
 
-def draw():
-    digit_drawing.begin_drawing()
+        self.input_layer_neurons = np.array([LIFNeuron.LIF_Neuron(type=0) for _ in range(NUM_INPUT_LAYER)])
+        self.hidden_layer_neurons = np.array([LIFNeuron.LIF_Neuron(type=1) for _ in range(NUM_HIDDEN_LAYER)])
+        self.output_layer_neurons = np.array([LIFNeuron.LIF_Neuron(type=2) for _ in range(NUM_OUTPUT_LAYER)])
+
+        num_input_to_hidden = int(np.random.uniform(0.1, 0.3) * NUM_HIDDEN_LAYER)
+        num_hidden_to_output = NUM_OUTPUT_LAYER ## since there's only 10 output neurons, maybe change this
+
+        for neuron in self.hidden_layer_neurons:
+            connections = []
+            weights = np.random.uniform(0.01, 0.05, size=num_input_to_hidden)
+            for _ in range(num_input_to_hidden): 
+                connections.append(np.random.choice(self.input_layer_neurons))
+
+            self.input_hidden_connections[neuron] = connections
+            self.input_hidden_weights[neuron] = weights
+
+        for neuron in self.output_layer_neurons:
+            connections = []
+            weights = np.random.uniform(0.01, 0.05, size=num_hidden_to_output)
+            for _ in range(num_hidden_to_output): 
+                connections.append(np.random.choice(self.hidden_layer_neurons))
+
+            self.hidden_output_connections[neuron] = connections
+            self.hidden_output_weights[neuron] = weights
+
+        self.saveConnectivity()
+        return self
+
+    def saveConnectivity(self):
+        with open(f"{FILEPATH}/data/network.pkl", "wb") as f:
+            pickle.dump(self, f)
+
+    def run(self):
+        digit_drawing.begin_drawing()
+
+        if digit_drawing.done:
+            while running:
+                self.updateNeurons()
+        else:
+            print("No number drawn. Exiting...")
+            sys.exit()
 
 if __name__ == "__main__":
-    loadConnectivity()
-    thread = threading.Thread(target=run)
-    thread.start()
-    digit_drawing.begin_drawing()
+    neural_net = LIFNeuralNetwork()
+    try:
+        with open(f"{FILEPATH}/data/network.pkl", "rb") as f:
+            data = pickle.load(f)
+            neural_net = data
+    except:
+        print("Import failed. Generate new network? Y/N")
+        if input("") == 'Y':
+            neural_net.connectNeurons()
+        else:
+            sys.exit()
+
+    neural_net.run()
