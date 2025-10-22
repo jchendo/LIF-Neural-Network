@@ -1,1 +1,1 @@
-def run():
+print(neuron.input)
