@@ -13,6 +13,7 @@ class LIF_Neuron:
     spike_str     = 0
     id            = 0
     Vm            = -65
+    spikes        = np.zeros(TIMESTEPS, dtype=np.int8)
 
     def __init__(self, type, id, delay):
         self.type = type
@@ -20,18 +21,20 @@ class LIF_Neuron:
         self.delay = delay
         match self.type:
             case 0: self.spike_str = 20
-            case 1: self.spike_str = 5
+            case 1: self.spike_str = 200
             case 2: self.spike_str = 20
 
-    def update(self):
+    def update(self, timestep):
         self.Vm += (1.0/TC) * (-(self.Vm + 65) + (self.input * self.spike_str))
 
-        if self.type == 1:
+        if self.type == 0:
+            #print(self.spike_str)
             print(f"Vm: {self.Vm}")
 
         if self.Vm >= SPIKE_THR and self.curr_delay >= self.delay:
             self.emit_spike()
             self.Vm = -65
+            self.spikes[timestep] = 1
             self.curr_delay = 0
 
         elif self.Vm >= SPIKE_THR: ## be careful with this delay, definitely a possbility this logic could cook the input/output encoding

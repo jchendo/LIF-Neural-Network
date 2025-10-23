@@ -7,7 +7,7 @@ screen_size = 560
 
 class DigitDraw:
 
-    pixels = np.ones(shape=(28,28), dtype=bool)
+    pixels = np.zeros(shape=(28,28), dtype=bool)
     screen = pg.display.set_mode((screen_size,screen_size))
     screen.fill("white")
     running = True

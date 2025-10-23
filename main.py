@@ -13,7 +13,7 @@ else:
 NUM_INPUT_LAYER = 784
 NUM_HIDDEN_LAYER = 200
 NUM_OUTPUT_LAYER = 10
-NUM_TIMESTEPS = 500
+NUM_TIMESTEPS = 50
 
 digit_drawing = DigitDraw.DigitDraw()
 running = True
@@ -31,7 +31,7 @@ class LIFNeuralNetwork:
         self.hidden_output_connections = {}
         self.hidden_output_weights = {} 
 
-    def updateNeurons(self):
+    def updateNeurons(self, timestep):
         pixels = digit_drawing.pixels
         ## update input neurons
         for num in range(NUM_INPUT_LAYER): ## probably numpy vectorize this
@@ -45,19 +45,19 @@ class LIFNeuralNetwork:
             if pixel: ## colored black
                 neuron.input = 1
 
-            neuron.update()
+            neuron.update(timestep)
 
         ## update hidden neurons
         for neuron in self.hidden_layer_neurons:
             neuron.input = 0
             self.sumInputs(neuron)
-            neuron.update()
+            neuron.update(timestep)
 
         ## update output neurons
         for neuron in self.output_layer_neurons:
             neuron.input = 0
             self.sumInputs(neuron)
-            neuron.update()
+            neuron.update(timestep)
 
     def sumInputs(self,neuron):
 
@@ -114,6 +114,8 @@ class LIFNeuralNetwork:
     @classmethod
     def loadConnectivity(cls):
         try:
+            if input("New network? ") == 'Y':
+                return None ## goes to the except block
             with open(f"{FILEPATH}/data/network.pkl", "rb") as f:
                 return pickle.load(f)
         except:
@@ -131,8 +133,8 @@ class LIFNeuralNetwork:
         digit_drawing.begin_drawing()
 
         if digit_drawing.done:
-            for _ in range(NUM_TIMESTEPS):
-                self.updateNeurons()
+            for timestep in range(NUM_TIMESTEPS):
+                self.updateNeurons(timestep)
         else:
             print("No number drawn. Exiting...")
             sys.exit()
