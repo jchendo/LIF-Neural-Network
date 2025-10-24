@@ -1,7 +1,7 @@
 import numpy as np
 
 SPIKE_THR = -50
-TIMESTEPS = 500
+TIMESTEPS = 50
 TC = 10 ## time constant, subject to change
 
 class LIF_Neuron:
@@ -13,6 +13,7 @@ class LIF_Neuron:
     change_rate   = 0
     id            = 0
     Vm            = -65
+    eligibility   = 0 ## controls the rate of plasticity
     spikes        = np.zeros(TIMESTEPS)
     voltages      = np.zeros(TIMESTEPS)
 
@@ -27,11 +28,13 @@ class LIF_Neuron:
 
     def update(self, timestep):
         self.Vm += (1.0/TC) * (-(self.Vm + 65) + (self.input * self.change_rate))
+        self.eligibility *= 0.9
         self.voltages[timestep] = self.Vm
 
         if self.Vm >= SPIKE_THR and self.curr_delay >= self.delay:
             self.emit_spike()
             self.Vm = np.random.randint(-68, -62)
+            self.eligibility += 1
             self.spikes[timestep] = 1
             self.curr_delay = 0
 
@@ -42,4 +45,12 @@ class LIF_Neuron:
 
     def emit_spike(self):
         self.output = 1
+
+    def reset(self):
+        self.spikes      = np.zeros(TIMESTEPS)
+        self.voltages    = np.zeros(TIMESTEPS)
+        self.Vm          = -65
+        self.input       = 0.0
+        self.output      = 0
+        self.eligibility = 0
 
