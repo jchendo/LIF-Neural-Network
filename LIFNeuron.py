@@ -1,7 +1,7 @@
 import numpy as np
 
 SPIKE_THR = -50
-TIMESTEPS = 50
+TIMESTEPS = 500
 TC = 10 ## time constant, subject to change
 
 class LIF_Neuron:
@@ -23,7 +23,7 @@ class LIF_Neuron:
         match self.type:
             case 0: self.change_rate = 60
             case 1: self.change_rate = 175
-            case 2: self.change_rate = 20
+            case 2: self.change_rate = 100
 
     def update(self, timestep):
         self.Vm += (1.0/TC) * (-(self.Vm + 65) + (self.input * self.change_rate))

@@ -1,23 +1,30 @@
 import DigitDraw
 import LIFNeuron
 import NetworkDisplay
+import MNISTLoader # type: ignore
+from os.path import join
 import numpy as np
 import pickle
 import sys
 
-laptop = False
+laptop = True
 if laptop:
     FILEPATH = "C:/Users/jacob/OneDrive/Desktop/Code/Projects/DigitRec Neural Network/"
 else:
     FILEPATH = "C:/Users/jacob/Desktop/Code/Python/DigitRec/"
 
-NUM_INPUT_LAYER = 4
-NUM_HIDDEN_LAYER = 5
-NUM_OUTPUT_LAYER = 2
-NUM_TIMESTEPS = 50
+data_root          = join(FILEPATH, "data/MNIST Dataset")
+training_images_fp = join(data_root, "train-images.idx3-ubyte")
+training_labels_fp = join(data_root, "train-labels.idx1-ubyte")
+test_images_fp     = join(data_root, "t10k-images.idx3-ubyte")
+test_labels_fp     = join(data_root, "t10k-labels.idx1-ubyte")
+
+NUM_INPUT_LAYER = 784
+NUM_HIDDEN_LAYER = 200
+NUM_OUTPUT_LAYER = 10
+NUM_TIMESTEPS = 500
 
 digit_drawing = DigitDraw.DigitDraw()
-running = True
 
 class LIFNeuralNetwork:
 
@@ -45,7 +52,7 @@ class LIFNeuralNetwork:
 
             ## could potentially do this elsewhere since it only needs to be done once
             if pixel: ## colored black
-                neuron.input = 1
+                neuron.input = pixel / 255.0 
 
             neuron.update(timestep)
 
@@ -80,6 +87,28 @@ class LIFNeuralNetwork:
 
             neuron.input += input_neuron.output * synapse_weight
         
+    def predictNumber(self):
+        num_total_spikes = 0
+        confidence = 0.0
+        guess = None
+        ## sum total number of spikes
+        for output_neuron in self.output_layer_neurons: 
+            num_local_spikes = np.sum(output_neuron.spikes)
+            num_total_spikes += num_local_spikes
+        ## compare confidence values
+        for num in range(len(self.output_layer_neurons)):
+            output_neuron = self.output_layer_neurons[num]
+            num_local_spikes = np.sum(output_neuron.spikes)
+            local_confidence = float(num_local_spikes)/num_total_spikes
+
+            print(num_local_spikes)
+
+            if local_confidence > confidence:
+                guess = num
+                confidence = local_confidence
+
+        return guess
+    
     def clearNeuronHistories(self):
         for neuron in self.ALL_NEURONS:
             neuron.spikes = np.zeros(NUM_TIMESTEPS)
@@ -100,9 +129,9 @@ class LIFNeuralNetwork:
 
         ## Connect hidden layer neurons to input neurons
         for neuron in self.hidden_layer_neurons:
-            num_input_to_hidden = int(np.random.uniform(0.6, 0.8) * NUM_HIDDEN_LAYER)
+            num_input_to_hidden = int(np.random.uniform(0.1, 0.3) * NUM_HIDDEN_LAYER)
             connections = []
-            weights = np.random.uniform(0.05, 0.20, size=num_input_to_hidden)
+            weights = np.random.uniform(0.02, 0.05, size=num_input_to_hidden)
             for _ in range(num_input_to_hidden): 
                 connections.append(np.random.choice(self.input_layer_neurons).id)
 
@@ -113,7 +142,7 @@ class LIFNeuralNetwork:
         for neuron in self.output_layer_neurons:
             ## We're just connecting every hidden layer neuron to every output neuron
             connections = [_ for _ in range(NUM_HIDDEN_LAYER)]
-            weights = np.random.uniform(0.05, 0.20, size=num_hidden_to_output)
+            weights = np.random.uniform(0.1, 0.35, size=num_hidden_to_output)
 
             self.hidden_output_connections[neuron.id] = connections
             self.hidden_output_weights[neuron.id] = weights
@@ -147,17 +176,23 @@ class LIFNeuralNetwork:
             for timestep in range(NUM_TIMESTEPS):
                 self.updateNeurons(timestep)
 
-            network_display = NetworkDisplay.NetworkDisplay() ## have to initialize this here otherwise it gets weird w/ DigitDraw
-            network_data = self.compileNetworkData()
-            network_display.run(network_data, NUM_TIMESTEPS)
+            # network_display = NetworkDisplay.NetworkDisplay() ## have to initialize this here otherwise it gets weird w/ DigitDraw
+            # network_data = self.compileNetworkData()
+            # network_display.run(network_data, NUM_TIMESTEPS)
+
+            guess = self.predictNumber()
+            print(f"Guess: {guess}")
 
         else:
             print("No number drawn. Exiting...")
             sys.exit()
 
 if __name__ == "__main__":
+    ## MNIST data
+    data_loader = MNISTLoader.MNISTDataloader(training_images_fp, training_labels_fp, test_images_fp, test_labels_fp)
+    (training_images, training_labels), (test_images, test_labels) = data_loader.load_data()
+
     neural_net = LIFNeuralNetwork.loadConnectivity()
-    #print(neural_net.input_hidden_connections)
     if neural_net == None:
         neural_net = LIFNeuralNetwork()
         neural_net.connectNeurons()
