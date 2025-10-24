@@ -1,18 +1,19 @@
 import DigitDraw
 import LIFNeuron
+import NetworkDisplay
 import numpy as np
 import pickle
 import sys
 
-laptop = True
+laptop = False
 if laptop:
     FILEPATH = "C:/Users/jacob/OneDrive/Desktop/Code/Projects/DigitRec Neural Network/"
 else:
     FILEPATH = "C:/Users/jacob/Desktop/Code/Python/DigitRec/"
 
-NUM_INPUT_LAYER = 784
-NUM_HIDDEN_LAYER = 200
-NUM_OUTPUT_LAYER = 10
+NUM_INPUT_LAYER = 4
+NUM_HIDDEN_LAYER = 5
+NUM_OUTPUT_LAYER = 2
 NUM_TIMESTEPS = 50
 
 digit_drawing = DigitDraw.DigitDraw()
@@ -24,6 +25,7 @@ class LIFNeuralNetwork:
         self.input_layer_neurons = None
         self.hidden_layer_neurons = None
         self.output_layer_neurons = None
+        self.ALL_NEURONS = None
 
         self.input_hidden_connections = {} ## LIFNeuron: [LIFNeuron, LIFNeuron, LIFNeuron, etc] -> the key receives input from the list of neurons
         self.input_hidden_weights = {} ## {LIFNeuron: [0.1,0.2,0.3,0.4]} etc
@@ -37,8 +39,8 @@ class LIFNeuralNetwork:
         for num in range(NUM_INPUT_LAYER): ## probably numpy vectorize this
             neuron = self.input_layer_neurons[num]
 
-            pixel_val_x = num % 28
-            pixel_val_y = num // 28
+            pixel_val_x = num % digit_drawing.NUM_PIXELS
+            pixel_val_y = num // digit_drawing.NUM_PIXELS
             pixel = pixels[pixel_val_x][pixel_val_y]
 
             ## could potentially do this elsewhere since it only needs to be done once
@@ -60,39 +62,47 @@ class LIFNeuralNetwork:
             neuron.update(timestep)
 
     def sumInputs(self,neuron):
-
-        if neuron.type == 1:
-            neurons = self.input_layer_neurons
-            connections = self.input_hidden_connections
-            weights = self.input_hidden_weights
-        else:
-            neurons = self.hidden_layer_neurons
-            connections = self.hidden_output_connections
-            weights = self.hidden_output_weights
-
+        
+        match neuron.type:
+            case 1: ## hidden layer
+                    neurons = self.input_layer_neurons
+                    connections = self.input_hidden_connections
+                    weights = self.input_hidden_weights
+            case 2: ## output layer
+                    neurons = self.hidden_layer_neurons
+                    connections = self.hidden_output_connections
+                    weights = self.hidden_output_weights
+    
         for input_num in range(len(connections[neuron.id])):
             input_neuron_id = connections[neuron.id][input_num]
             input_neuron = neurons[input_neuron_id]
             synapse_weight = weights[neuron.id][input_num]   
 
-            # if neuron.type == 2:
-            #     print(input_neuron.output)
-
             neuron.input += input_neuron.output * synapse_weight
         
+    def clearNeuronHistories(self):
+        for neuron in self.ALL_NEURONS:
+            neuron.spikes = np.zeros(NUM_TIMESTEPS)
+            neuron.voltages = np.zeros(NUM_TIMESTEPS)
+    
+    def compileNetworkData(self):
+        data = [self.input_layer_neurons, self.hidden_layer_neurons, self.output_layer_neurons, self.input_hidden_connections]
+        return data
+
     def connectNeurons(self):
 
         self.input_layer_neurons = np.array([LIFNeuron.LIF_Neuron(type=0, id=id, delay=np.random.randint(1,4)) for id in range(NUM_INPUT_LAYER)])
         self.hidden_layer_neurons = np.array([LIFNeuron.LIF_Neuron(type=1, id=id, delay=0) for id in range(NUM_HIDDEN_LAYER)])
         self.output_layer_neurons = np.array([LIFNeuron.LIF_Neuron(type=2, id=id, delay=0) for id in range(NUM_OUTPUT_LAYER)])
+        self.ALL_NEURONS = np.concatenate([self.input_layer_neurons, self.hidden_layer_neurons, self.output_layer_neurons])
 
         num_hidden_to_output = NUM_HIDDEN_LAYER ## since there's only 10 output neurons, maybe change this
 
         ## Connect hidden layer neurons to input neurons
         for neuron in self.hidden_layer_neurons:
-            num_input_to_hidden = int(np.random.uniform(0.1, 0.3) * NUM_HIDDEN_LAYER)
+            num_input_to_hidden = int(np.random.uniform(0.6, 0.8) * NUM_HIDDEN_LAYER)
             connections = []
-            weights = np.random.uniform(0.01, 0.05, size=num_input_to_hidden)
+            weights = np.random.uniform(0.05, 0.20, size=num_input_to_hidden)
             for _ in range(num_input_to_hidden): 
                 connections.append(np.random.choice(self.input_layer_neurons).id)
 
@@ -102,8 +112,8 @@ class LIFNeuralNetwork:
         ## Output layer to hidden
         for neuron in self.output_layer_neurons:
             ## We're just connecting every hidden layer neuron to every output neuron
-            connections = [_ for _ in range(0,200)]
-            weights = np.random.uniform(0.01, 0.05, size=num_hidden_to_output)
+            connections = [_ for _ in range(NUM_HIDDEN_LAYER)]
+            weights = np.random.uniform(0.05, 0.20, size=num_hidden_to_output)
 
             self.hidden_output_connections[neuron.id] = connections
             self.hidden_output_weights[neuron.id] = weights
@@ -130,11 +140,17 @@ class LIFNeuralNetwork:
             pickle.dump(self, f)
 
     def run(self):
+        self.clearNeuronHistories()
         digit_drawing.begin_drawing()
 
         if digit_drawing.done:
             for timestep in range(NUM_TIMESTEPS):
                 self.updateNeurons(timestep)
+
+            network_display = NetworkDisplay.NetworkDisplay() ## have to initialize this here otherwise it gets weird w/ DigitDraw
+            network_data = self.compileNetworkData()
+            network_display.run(network_data, NUM_TIMESTEPS)
+
         else:
             print("No number drawn. Exiting...")
             sys.exit()

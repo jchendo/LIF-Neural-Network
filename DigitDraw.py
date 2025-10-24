@@ -1,39 +1,41 @@
 import pygame as pg
 import numpy as np
 
-pg.init()
-pg.display.set_caption('Draw a Number - C to clear, Enter to confirm')
 screen_size = 560
 
 class DigitDraw:
 
-    pixels = np.zeros(shape=(28,28), dtype=bool)
+    NUM_PIXELS = 2
+    pixels = np.zeros(shape=(NUM_PIXELS,NUM_PIXELS), dtype=bool)
     screen = pg.display.set_mode((screen_size,screen_size))
     screen.fill("white")
     running = True
     done = False
 
     def __init__(self):
-        pass
+        pg.init()
+        pg.display.set_caption('Draw a Number - C to clear, Enter to confirm')
 
     def clear_screen(self):
         self.screen.fill("white")
 
     def color_square(self,mouse_pos):
-        grid_x = int((mouse_pos[0] / screen_size) * 28)
-        grid_y = int((mouse_pos[1] / screen_size) * 28)
+        grid_x = int((mouse_pos[0] / screen_size) * self.NUM_PIXELS)
+        grid_y = int((mouse_pos[1] / screen_size) * self.NUM_PIXELS)
 
-        adjacent_pixels = [(grid_x+1, grid_y), (grid_x-1, grid_y), (grid_x, grid_y+1), (grid_x, grid_y-1)]
+        adjacent_pixels = []
+        #adjacent_pixels = [(grid_x+1, grid_y), (grid_x-1, grid_y), (grid_x, grid_y+1), (grid_x, grid_y-1)]
+        pixel_offset = screen_size / self.NUM_PIXELS ## size of each grid square
 
         ## maybe clean this up
         for pixel in adjacent_pixels:
-            if pixel[0] < 28 and pixel[1] < 28:
-                pg.draw.rect(self.screen, "black", pg.Rect(pixel[0]*20, pixel[1]*20, 20, 20))
+            if pixel[0] < self.NUM_PIXELS and pixel[1] < self.NUM_PIXELS:
+                pg.draw.rect(self.screen, "black", pg.Rect(pixel[0]*pixel_offset, pixel[1]*pixel_offset, pixel_offset, pixel_offset))
                 self.pixels[pixel[0]][pixel[1]] = 1
 
-        if grid_x < 28 and grid_y < 28:
+        if grid_x < self.NUM_PIXELS and grid_y < self.NUM_PIXELS:
             self.pixels[grid_x][grid_y] = 1
-            pg.draw.rect(self.screen, "black", pg.Rect(grid_x*20, grid_y*20, 20, 20))
+            pg.draw.rect(self.screen, "black", pg.Rect(grid_x*pixel_offset, grid_y*pixel_offset, pixel_offset, pixel_offset))
 
     def begin_drawing(self):
         while self.running:
@@ -54,4 +56,3 @@ class DigitDraw:
                         return
 
             pg.display.flip()
-
