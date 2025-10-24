@@ -32,7 +32,6 @@ class LIF_Neuron:
         if self.Vm >= SPIKE_THR and self.curr_delay >= self.delay:
             self.emit_spike()
             self.Vm = np.random.randint(-68, -62)
-            print(self.voltages[timestep])
             self.spikes[timestep] = 1
             self.curr_delay = 0
 

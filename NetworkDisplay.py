@@ -44,7 +44,7 @@ class NetworkDisplay:
             now = pg.time.get_ticks()
 
             if now - self.last_tick > 500: ## pygame doesn't play well with time.sleep() or delays, so this is a workaround
-                self.screen.fill("white")
+                self.screen.fill("white") ## reset screen
                 self.last_tick = now
 
                 ## input layer
@@ -110,7 +110,6 @@ class NetworkDisplay:
 
             elif event.type == pg.KEYDOWN:
                 if event.key == pg.K_RIGHT:
-                    print(event)
                     self.display_network_subset(self.data, self.timesteps)
 
     def run(self, data, timesteps):
