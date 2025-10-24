@@ -52,11 +52,16 @@ class NetworkDisplay:
                     voltage = round(input_neurons[num].voltages[timestep],2)
                     coords = (200, input_offset*(num+1))
                     self.input_layer_circles.append(coords) ## change this to actually be used
-                    pg.draw.circle(self.screen, "black", center=coords, radius=20, width=1) # input neuron
 
                     ## render voltage text above each neuron
                     text = self.font.render(str(voltage), True, "black")
                     self.screen.blit(text, (coords[0], coords[1]+30))
+
+                    if input_neurons[num].spikes[timestep] != 1:
+                        pg.draw.circle(self.screen, "black", center=coords, radius=20, width=1) # input neuron
+                    else:
+                        pg.draw.circle(self.screen, "black", center=coords, radius=20)
+
                 ## hidden layer
                 for num in range(len(input_hidden_connections.keys())):
                     connections = input_hidden_connections[num]
@@ -64,22 +69,31 @@ class NetworkDisplay:
                     coords = (450, hidden_offset*(num+1))
                     self.hidden_layer_circles.append(coords)
 
-                    pg.draw.circle(self.screen, "black", center=coords, radius=8, width=1)
-
                     text = self.font.render(str(voltage), True, "black")
                     self.screen.blit(text, (coords[0], coords[1]+30))
+
+                    if hidden_neurons[num].spikes[timestep] != 1:
+                        pg.draw.circle(self.screen, "black", center=coords, radius=8, width=1)
+                    else:
+                        pg.draw.circle(self.screen, "black", center=coords, radius=8)
                     
                     for connection in connections:
                         pg.draw.line(self.screen, "black", coords, self.input_layer_circles[connection])
+
                 ## output layer
                 for num in range(self.num_outputs): ## outputs
                     voltage = round(output_neurons[num].voltages[timestep],2)
                     coords = (825, output_offset*(num+1))
                     self.output_layer_circles.append(coords)
-                    pg.draw.circle(self.screen, "black", center=coords, radius=25, width=1)
+                    
 
                     text = self.font.render(str(voltage), True, "black")
                     self.screen.blit(text, (coords[0], coords[1]+30))
+
+                    if output_neurons[num].spikes[timestep] != 1:
+                        pg.draw.circle(self.screen, "black", center=coords, radius=25, width=1)
+                    else:
+                        pg.draw.circle(self.screen, "black", center=coords, radius=25)
 
                     for hidden_coord in self.hidden_layer_circles: ## connect every hidden neuron to every output
                         pg.draw.line(self.screen, "black", hidden_coord, coords)
