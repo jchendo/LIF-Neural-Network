@@ -17,14 +17,14 @@ class LIF_Neuron:
     spikes        = np.zeros(TIMESTEPS)
     voltages      = np.zeros(TIMESTEPS)
 
-    def __init__(self, type, id, delay):
+    def __init__(self, type=0, id=0, delay=0):
         self.type = type
         self.id = id
         self.delay = delay
         match self.type:
             case 0: self.change_rate = 60
-            case 1: self.change_rate = 175
-            case 2: self.change_rate = 100
+            case 1: self.change_rate = 125
+            case 2: self.change_rate = 75
 
     def update(self, timestep):
         self.Vm += (1.0/TC) * (-(self.Vm + 65) + (self.input * self.change_rate))

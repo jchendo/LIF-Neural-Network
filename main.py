@@ -8,7 +8,7 @@ import sys
 from os.path import join
 from time import time
 
-laptop = False
+laptop = True
 if laptop:
     FILEPATH = "C:/Users/jacob/OneDrive/Desktop/Code/Projects/DigitRec Neural Network/"
 else:
@@ -102,6 +102,10 @@ class LIFNeuralNetwork:
         ## If incorrect, subtract weight_deltas, if correct, add.
         self.hidden_output_weights[guess][eligible_hidden_neurons] += (-(weight_deltas) + 2*correct*weight_deltas)
 
+        ## bound the weights to 0-1
+        self.hidden_output_weights[guess][eligible_hidden_neurons] = np.clip(self.hidden_output_weights[guess][eligible_hidden_neurons], 0.05, 1)
+        print(f"Hidden Output Weights: {np.sum(self.hidden_output_weights[guess][eligible_hidden_neurons])}")
+
         ## change weights of elibigle input->hidden synapses
         for hidden_neuron in eligible_hidden_neurons:
 
@@ -113,6 +117,10 @@ class LIFNeuralNetwork:
             weight_deltas = self.input_layer_eligibility[eligibile_input_neurons] * LEARNING_RATE
 
             self.input_hidden_weights[hidden_neuron][eligible_input_indices] += (-(weight_deltas) + 2*correct*weight_deltas)
+
+            self.input_hidden_weights[hidden_neuron][eligible_input_indices] = np.clip(self.input_hidden_weights[hidden_neuron][eligible_input_indices], 0.05, 1)
+
+            #print(f"Input Hidden Weights: {np.sum(self.input_hidden_weights[hidden_neuron][eligible_input_indices])}")
 
     def predictNumber(self):
         num_total_spikes = 0
@@ -151,8 +159,32 @@ class LIFNeuralNetwork:
         for neuron in self.ALL_NEURONS:
             neuron.reset()
     
-    def compileNetworkData(self):
-        data = [self.input_layer_neurons, self.hidden_layer_neurons, self.output_layer_neurons, self.input_hidden_connections]
+    def compileNetworkData(self, num_input, num_hidden, num_output):
+
+        input_neurons = np.empty(num_input, dtype=LIFNeuron.LIF_Neuron)
+        hidden_neurons = np.empty(0) ## num_hidden is for each input neuron
+        output_neurons = np.random.choice(self.output_layer_neurons, num_output)
+
+        for num in range(num_input):
+            neuron = np.random.choice(self.input_layer_neurons)
+            while(np.sum(neuron.spikes) == 0):
+                ## possible to get the same neuron but unlikely so I'm ignoring it
+                neuron = np.random.choice(self.input_layer_neurons)
+
+            input_neurons[num] = neuron
+
+        for input_neuron in input_neurons:
+            connected_hidden_neurons = []
+
+            ## find all hidden neurons connected to the input neurons we picked
+            for neuron in self.hidden_layer_neurons:
+                if input_neuron.id in self.input_hidden_connections[neuron.id]:
+                    connected_hidden_neurons.append(neuron)
+
+            hidden_neurons = np.concatenate((hidden_neurons, np.random.choice(connected_hidden_neurons, num_hidden)))
+
+
+        data = [input_neurons, hidden_neurons, output_neurons]
         return data
 
     def connectNeurons(self):
@@ -166,9 +198,9 @@ class LIFNeuralNetwork:
 
         ## Connect hidden layer neurons to input neurons
         for neuron in self.hidden_layer_neurons:
-            num_input_to_hidden = int(np.random.uniform(0.1, 0.3) * NUM_HIDDEN_LAYER)
+            num_input_to_hidden = int(np.random.uniform(0.2, 0.3) * NUM_HIDDEN_LAYER)
             connections = []
-            weights = np.random.uniform(0.05, 0.12, size=num_input_to_hidden)
+            weights = np.random.uniform(0.07, 0.12, size=num_input_to_hidden)
             for _ in range(num_input_to_hidden): 
                 connections.append(np.random.choice(self.input_layer_neurons).id)
 
@@ -179,7 +211,7 @@ class LIFNeuralNetwork:
         for neuron in self.output_layer_neurons:
             ## We're just connecting every hidden layer neuron to every output neuron
             connections = [_ for _ in range(NUM_HIDDEN_LAYER)]
-            weights = np.random.uniform(0.125, 0.25, size=num_hidden_to_output)
+            weights = np.random.uniform(0.05, 0.125, size=num_hidden_to_output)
 
             self.hidden_output_connections.append(np.array(connections))
             self.hidden_output_weights.append(weights)
@@ -220,19 +252,22 @@ class LIFNeuralNetwork:
             if guess == labels[img_num]:
                 self.changeWeights(guess, correct=True)
                 num_correct += 1
+            
             elif guess == None:
-                pass
+                break
             else:
                 self.changeWeights(guess, correct=False)
 
             percent_correct = (float(num_correct)/(img_num+1))*100
-
+            #print(guess)
             if not img_num % 100: ## every 100 images do an accuracy check
-                print(f"Accuracy: {round(percent_correct,2)}")
-        ## NETWORK DISPLAY FOR DEBUGGING
-        # network_display = NetworkDisplay.NetworkDisplay() ## have to initialize this here otherwise it gets weird w/ DigitDraw
-        # network_data = self.compileNetworkData()
-        # network_display.run(network_data, NUM_TIMESTEPS)
+                print(f"Accuracy: {round(percent_correct,2)}%")
+            
+
+        # NETWORK DISPLAY FOR DEBUGGING
+        network_display = NetworkDisplay.NetworkDisplay() ## have to initialize this here otherwise it gets weird w/ DigitDraw
+        network_data = self.compileNetworkData(num_input=3, num_hidden=3, num_output=6)
+        network_display.run(network_data, NUM_TIMESTEPS)
 
         ## INPUT FOR TRAINED MODEL
         # digit_drawing.begin_drawing()
